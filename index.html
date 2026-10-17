@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Code lab: prefix-free, UD and Kraft</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F3F5F8; --panel:#FFFFFF; --ink:#17233B; --muted:#5B6880; --rule:#D3DAE5; --grid:#E6EBF2;
+  --zero:#0E7C86; --one:#B4366B; --ok:#2F7D3A; --bad:#B8432F; --stub:#9AA6BA; --focus:#2C5FD6;
+  --sans:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#0F1624; --panel:#172033; --ink:#E4E9F2; --muted:#97A3B8; --rule:#2A3650; --grid:#1C2740;
+    --zero:#3CC2CC; --one:#F07AA8; --ok:#6CCB7A; --bad:#F08A70; --stub:#55627A; --focus:#7FA6FF;
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.55 var(--sans)}
+main{max-width:1120px;margin:0 auto;padding:32px 20px 64px}
+h1{font-size:2rem;line-height:1.15;margin:0 0 6px;letter-spacing:-.01em}
+h2{font-size:1.2rem;margin:0 0 12px}
+p{margin:0 0 10px}
+.lede{color:var(--muted);max-width:68ch;margin-bottom:22px}
+code,.mono{font-family:var(--mono);font-size:.92em}
+.b0{color:var(--zero)} .b1{color:var(--one)}
+section{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:20px;margin-bottom:18px}
+.cols{display:grid;gap:18px}
+.cols>section{margin-bottom:0}
+.cols{margin-bottom:18px}
+@media (min-width:880px){ .cols.two{grid-template-columns:1.25fr 1fr} .cols.even{grid-template-columns:1fr 1fr} }
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}
+select,input,button{font:inherit;color:inherit}
+select,input[type=text]{background:var(--paper);border:1px solid var(--rule);border-radius:6px;padding:6px 8px;min-width:0}
+button{background:var(--ink);color:var(--panel);border:0;border-radius:6px;padding:7px 14px;cursor:pointer}
+button.ghost{background:transparent;color:var(--muted);border:1px solid var(--rule);padding:4px 10px}
+button.x{background:transparent;color:var(--muted);padding:2px 8px;font-size:1.1rem;line-height:1}
+button.x:hover{color:var(--bad)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+table{border-collapse:collapse;width:100%}
+th{font-weight:700;text-align:left;color:var(--muted);font-size:.9rem;padding:4px 6px;border-bottom:1px solid var(--rule)}
+td{padding:4px 6px;border-bottom:1px solid var(--grid);vertical-align:middle}
+td input{width:100%}
+td.num{font-family:var(--mono);font-size:.9rem;color:var(--muted);white-space:nowrap}
+input.mono{font-family:var(--mono)}
+input.invalid{border-color:var(--bad)}
+.scroll{overflow-x:auto}
+dl.metrics{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:0}
+dl.metrics dt{color:var(--muted)}
+dl.metrics dd{margin:0;font-family:var(--mono);font-size:.95rem}
+.verdicts{margin-top:16px;border-top:1px solid var(--rule);padding-top:14px;display:grid;gap:10px}
+.verdict{display:grid;grid-template-columns:22px 1fr;gap:8px;align-items:start}
+.mark{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.85rem;color:var(--panel)}
+.mark.yes{background:var(--ok)} .mark.no{background:var(--bad)} .mark.na{background:var(--stub)}
+.verdict small{display:block;color:var(--muted);font-size:.88rem;line-height:1.4}
+.errors{color:var(--bad)}
+.treebox{overflow-x:auto;border-radius:8px;
+  background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:20px 20px}
+.treebox svg{display:block;margin:0 auto}
+.legend{display:flex;flex-wrap:wrap;gap:16px;color:var(--muted);font-size:.88rem;margin-top:10px}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px;background:var(--c)}
+.step{border-left:3px solid var(--rule);padding:4px 0 8px 12px;margin-bottom:8px}
+.step .set{font-family:var(--mono)}
+.step ul{margin:4px 0 0;padding-left:18px;color:var(--muted);font-size:.9rem}
+.step.hit{border-left-color:var(--bad)}
+.step.done{border-left-color:var(--ok)}
+.result{font-weight:700;margin-top:8px}
+.result.yes{color:var(--ok)} .result.no{color:var(--bad)}
+.field{display:grid;gap:4px;margin-bottom:12px}
+.field label{color:var(--muted);font-size:.9rem}
+.field .row{display:flex;gap:8px}
+.field .row input{flex:1}
+.parse{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}
+.chip{display:inline-flex;flex-direction:column;align-items:center;border:1px solid var(--rule);border-radius:6px;padding:2px 8px;background:var(--paper)}
+.chip b{font-size:.95rem}
+.chip code{font-size:.8rem}
+.chip.rest{border-style:dashed;color:var(--bad)}
+.note{color:var(--muted);font-size:.9rem}
+@media (prefers-reduced-motion:no-preference){ .treebox svg .node{transition:fill .2s} }
+</style>
+</head>
+<body>
+<main>
+  <h1>Code lab: prefix-free, UD and Kraft</h1>
+  <p class="lede">Type a code, or load one from the lecture. Every change redraws the code tree and re-runs the checks: expected length, entropy, the Kraft–McMillan sum, and the Sardinas–Patterson test for unique decipherability.</p>
+
+  <div class="cols two">
+    <section>
+      <h2>Your code</h2>
+      <div class="toolbar">
+        <label for="preset" class="note">Load</label>
+        <select id="preset"></select>
+        <button class="ghost" id="addRow" type="button">Add symbol</button>
+      </div>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Symbol</th><th>p<sub>i</sub></th><th>Codeword</th><th title="Information content −log₂ pᵢ">I(s<sub>i</sub>)</th><th>|c<sub>i</sub>|</th><th></th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <p class="note" style="margin-top:10px">Probabilities can be decimals or fractions like 1/8. If they don't add up to 1, they're normalised.</p>
+    </section>
+
+    <section>
+      <h2>Measurements</h2>
+      <div id="metrics"></div>
+    </section>
+  </div>
+
+  <section>
+    <h2>Code tree</h2>
+    <p class="note">Left branch is <span class="b0 mono">0</span>, right branch is <span class="b1 mono">1</span>. Dashed stubs are unused prefixes: a prefix-free code with any stub is incomplete, because a codeword could still be added there.</p>
+    <div class="treebox" id="tree"></div>
+    <div class="legend">
+      <span style="--c:var(--ink)">Codeword</span>
+      <span style="--c:var(--bad)">Codeword that is a prefix of another</span>
+      <span style="--c:var(--stub)">Unused prefix</span>
+    </div>
+  </section>
+
+  <div class="cols even">
+    <section>
+      <h2>Sardinas–Patterson test</h2>
+      <p class="note">S<sub>1</sub> = C⁻¹C − {ε}, then S<sub>i+1</sub> = C⁻¹S<sub>i</sub> ∪ S<sub>i</sub>⁻¹C. Stop with "not UD" if a set contains ε or a codeword; stop with "UD" if a set is empty or repeats an earlier one.</p>
+      <div id="sp"></div>
+    </section>
+
+    <section>
+      <h2>Encode and decode</h2>
+      <div class="field">
+        <label for="msg">Message (symbols)</label>
+        <div class="row"><input type="text" id="msg" class="mono" value=""><button type="button" id="encodeBtn">Encode</button></div>
+      </div>
+      <div class="field">
+        <label for="bits">Bit string</label>
+        <input type="text" id="bits" class="mono" value="" inputmode="numeric">
+      </div>
+      <div id="decode"></div>
+    </section>
+  </div>
+</main>
+
+<script>
+(function(){
+const P8 = ['0.5','0.25','0.125','0.125'];
+const L6 = [['a','0.67'],['b','0.11'],['c','0.07'],['d','0.06'],['e','0.05'],['f','0.04']];
+const mk6 = codes => L6.map((r,i)=>[r[0],r[1],codes[i]]);
+const mk4 = codes => ['a','b','c','d'].map((s,i)=>[s,P8[i],codes[i]]);
+const PRESETS = [
+  {label:'Lecture example: code 1 (fixed length)', rows:mk6(['000','001','010','011','100','101']), msg:'abacfa'},
+  {label:'Lecture example: code 2', rows:mk6(['00','01','100','101','110','111']), msg:'abacfa'},
+  {label:'Lecture example: code 3 (minimum redundancy)', rows:mk6(['0','100','101','110','1110','1111']), msg:'abacfa'},
+  {label:'Exercise: code 1', rows:mk4(['0','0','1','10']), msg:'abcd'},
+  {label:'Exercise: code 2', rows:mk4(['0','1','00','11']), msg:'abcd'},
+  {label:'Exercise: code 3', rows:mk4(['0','10','110','111']), msg:'abcd'},
+  {label:'Exercise: code 4', rows:mk4(['0','01','011','0111']), msg:'abcd'},
+  {label:'{0, 01, 11}: UD but not instantaneous', rows:[['a','1/3','0'],['b','1/3','01'],['c','1/3','11']], bits:'0111111111111111'},
+  {label:'{0, 01, 10}: not UD', rows:[['a','1/3','0'],['b','1/3','01'],['c','1/3','10']], bits:'010'},
+  {label:'Kraft > 1: five codewords, lengths 2,2,2,2,2', rows:[['a','0.2','00'],['b','0.2','01'],['c','0.2','10'],['d','0.2','11'],['e','0.2','00']], msg:'ae'}
+];
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const bitsHTML = s => s === '' ? 'ε' : [...s].map(b => `<span class="b${b}">${b}</span>`).join('');
+const fx = (x,d=3) => Number.isFinite(x) ? (Math.round(x*10**d)/10**d).toString() : '—';
+const gcd = (a,b) => { while(b){ [a,b]=[b,a%b]; } return a; };
+
+let rows = [];
+
+function parseP(s){
+  s = String(s).trim();
+  if(s.includes('/')){ const [a,b] = s.split('/').map(Number); return b ? a/b : NaN; }
+  return s === '' ? NaN : Number(s);
+}
+
+/* ---------- table ---------- */
+function renderTable(){
+  const tb = $('#rows');
+  tb.innerHTML = rows.map((r,i)=>`
+    <tr data-i="${i}">
+      <td><input type="text" data-k="sym" value="${esc(r.sym)}" aria-label="Symbol ${i+1}" size="4"></td>
+      <td><input type="text" data-k="p" class="mono" value="${esc(r.p)}" aria-label="Probability ${i+1}" size="6"></td>
+      <td><input type="text" data-k="code" class="mono" value="${esc(r.code)}" aria-label="Codeword ${i+1}" size="8"></td>
+      <td class="num" data-out="I"></td>
+      <td class="num" data-out="len"></td>
+      <td><button class="x" type="button" data-del="${i}" aria-label="Remove row ${i+1}">×</button></td>
+    </tr>`).join('');
+}
+$('#rows').addEventListener('input', e => {
+  const t = e.target, tr = t.closest('tr'); if(!tr || !t.dataset.k) return;
+  rows[+tr.dataset.i][t.dataset.k] = t.value.trim();
+  update();
+});
+$('#rows').addEventListener('click', e => {
+  const d = e.target.dataset.del; if(d === undefined) return;
+  rows.splice(+d,1); renderTable(); update();
+});
+$('#addRow').addEventListener('click', () => {
+  const used = new Set(rows.map(r=>r.sym));
+  let sym = 'abcdefghijklmnopqrstuvwxyz'.split('').find(c=>!used.has(c)) || 's'+(rows.length+1);
+  rows.push({sym, p:'0', code:''}); renderTable(); update();
+  const inputs = $('#rows').querySelectorAll('tr:last-child input'); if(inputs[2]) inputs[2].focus();
+});
+
+/* ---------- analysis ---------- */
+function analyze(){
+  const errs = [];
+  rows.forEach((r,i)=>{
+    if(!r.sym) errs.push(`Row ${i+1}: give the symbol a name.`);
+    if(!/^[01]+$/.test(r.code)) errs.push(`Row ${i+1}: the codeword must be a non-empty string of 0s and 1s.`);
+    else if(r.code.length > 30) errs.push(`Row ${i+1}: keep codewords to 30 bits or fewer.`);
+    const p = parseP(r.p); if(!(p >= 0)) errs.push(`Row ${i+1}: the probability must be a number like 0.25 or 1/4.`);
+  });
+  const syms = rows.map(r=>r.sym);
+  if(new Set(syms).size !== syms.length) errs.push('Two rows use the same symbol name. Rename one so messages can be encoded.');
+  if(rows.length < 1) errs.push('Add at least one symbol.');
+  if(errs.length) return {errs};
+
+  const C = rows.map(r=>r.code);
+  const ps = rows.map(r=>parseP(r.p));
+  const psum = ps.reduce((a,b)=>a+b,0);
+  const pn = ps.map(p => psum>0 ? p/psum : 1/rows.length);
+  const E = pn.reduce((s,p,i)=>s+p*C[i].length,0);
+  const H = -pn.reduce((s,p)=>s+(p>0?p*Math.log2(p):0),0);
+  const maxL = Math.max(...C.map(c=>c.length));
+  let num = C.reduce((s,c)=>s+2**(maxL-c.length),0), den = 2**maxL;
+  const K = num/den; const g = gcd(num,den); const kn = num/g, kd = den/g;
+
+  const dups = [], prefixPairs = [];
+  for(let i=0;i<C.length;i++) for(let j=0;j<C.length;j++){
+    if(i===j) continue;
+    if(C[i]===C[j]){ if(i<j) dups.push([i,j]); }
+    else if(C[j].startsWith(C[i])) prefixPairs.push([i,j]);
+  }
+  const prefixFree = dups.length===0 && prefixPairs.length===0;
+  const complete = prefixFree ? (kn===kd) : null;
+  const sp = sardinas(C);
+  let ud = sp.ud, udReason = sp.reason;
+  if(dups.length){ ud = false; udReason = `${esc(rows[dups[0][0]].sym)} and ${esc(rows[dups[0][1]].sym)} share the codeword ${bitsHTML(C[dups[0][0]])}, so it can't be told apart.`; }
+  return {C, ps, pn, psum, E, H, K, kn, kd, maxL, dups, prefixPairs, prefixFree, complete, sp, ud, udReason};
+}
+
+function quot(S,T){ // S⁻¹T = { d | ad ∈ T, a ∈ S }
+  const out = new Map();
+  for(const a of S) for(const t of T)
+    if(t.length>=a.length && t.startsWith(a)){
+      const d = t.slice(a.length);
+      if(!out.has(d)) out.set(d, `${bitsHTML(a)} is a prefix of ${bitsHTML(t)}, dangling suffix ${bitsHTML(d)}`);
+    }
+  return out;
+}
+function sardinas(C){
+  const Cs = [...new Set(C)];
+  const steps = [];
+  let S = quot(Cs,Cs); S.delete('');
+  steps.push({i:1, formula:'C⁻¹C − {ε}', set:S});
+  const seen = [];
+  for(let i=1;i<=200;i++){
+    const keys = [...S.keys()];
+    const st = steps[steps.length-1];
+    if(i>1 && S.has('')){ st.hit=true; return {ud:false, steps, reason:`S<sub>${i}</sub> contains ε, so some bit string splits into codewords in two ways.`}; }
+    const hit = keys.find(k=>Cs.includes(k));
+    if(hit!==undefined){ st.hit=true; return {ud:false, steps, reason:`S<sub>${i}</sub> contains ${bitsHTML(hit)}, which is an original codeword.`}; }
+    if(keys.length===0){ st.done=true; return {ud:true, steps, reason:`S<sub>${i}</sub> is empty: no dangling suffixes are left.`}; }
+    const sig = keys.slice().sort().join(',');
+    const j = seen.indexOf(sig);
+    if(j>=0){ st.done=true; return {ud:true, steps, reason:`S<sub>${i}</sub> = S<sub>${j+1}</sub>, so no new dangling suffixes can appear.`}; }
+    seen.push(sig);
+    const N = new Map(quot(Cs,keys));
+    for(const [k,v] of quot(keys,Cs)) if(!N.has(k)) N.set(k,v);
+    steps.push({i:i+1, formula:`C⁻¹S<sub>${i}</sub> ∪ S<sub>${i}</sub>⁻¹C`, set:N});
+    S = N;
+  }
+  return {ud:true, steps, reason:'Stopped after 200 rounds.'};
+}
+
+/* ---------- rendering ---------- */
+function verdict(state, title, detail){
+  const sym = state===true?'✓':state===false?'✗':'–';
+  const cls = state===true?'yes':state===false?'no':'na';
+  return `<div class="verdict"><span class="mark ${cls}" aria-hidden="true">${sym}</span><div><strong>${title}: ${state===true?'yes':state===false?'no':'not applicable'}</strong><small>${detail}</small></div></div>`;
+}
+
+function renderMetrics(a){
+  if(a.errs){ $('#metrics').innerHTML = `<div class="errors">${a.errs.map(e=>`<p>${esc(e)}</p>`).join('')}</div>`; return; }
+  const sumNote = Math.abs(a.psum-1) > 1e-9 ? ` <span class="note">(entered sum ${fx(a.psum,4)}, normalised)</span>` : '';
+  const kFrac = a.kd===1 ? `${a.kn}` : `${a.kn}/${a.kd}`;
+  let pfDetail;
+  if(a.dups.length) pfDetail = `Two symbols have the same codeword ${bitsHTML(a.C[a.dups[0][0]])}.`;
+  else if(a.prefixPairs.length){ const [i,j] = a.prefixPairs[0]; pfDetail = `${bitsHTML(a.C[i])} (${esc(rows[i].sym)}) is a prefix of ${bitsHTML(a.C[j])} (${esc(rows[j].sym)}).`; }
+  else pfDetail = 'No codeword is a prefix of another, so the code is instantaneous: each codeword is decoded the moment it ends.';
+  const cDetail = a.complete===null ? 'Completeness is checked here for prefix-free codes, where it means the code tree has no unused prefixes.'
+    : a.complete ? 'K(C) = 1 and every branch of the tree ends in a codeword: no codeword can be added.'
+    : `K(C) &lt; 1, so there are unused prefixes where a codeword could be added (see the dashed stubs).`;
+  const kDetail = a.K > 1 ? 'K(C) &gt; 1, so by Kraft–McMillan this code cannot be UD, and no prefix code has these lengths.'
+    : 'K(C) ≤ 1, so a prefix-free code with exactly these lengths exists (Kraft).';
+  $('#metrics').innerHTML = `
+    <dl class="metrics">
+      <dt>Expected length E(C,P)</dt><dd>${fx(a.E)} bits/symbol${sumNote}</dd>
+      <dt>Entropy H(P)</dt><dd>${fx(a.H)} bits/symbol</dd>
+      <dt>Redundancy E − H</dt><dd>${fx(a.E-a.H)} bits/symbol</dd>
+      <dt>Kraft sum K(C)</dt><dd>${kFrac}${a.kd!==1?` = ${fx(a.K,4)}`:''}</dd>
+    </dl>
+    <div class="verdicts">
+      ${verdict(a.K<=1, 'Satisfies Kraft–McMillan', kDetail)}
+      ${verdict(a.prefixFree, 'Prefix-free', pfDetail)}
+      ${verdict(a.complete, 'Complete', cDetail)}
+      ${verdict(a.ud, 'Uniquely decipherable', a.udReason + (a.ud && !a.prefixFree ? ' It is UD but not instantaneous: the decoder may need to look ahead.' : ''))}
+    </div>
+    ${a.ud && a.E < a.H - 1e-9 ? '' : ''}`;
+  // per-row columns
+  $('#rows').querySelectorAll('tr').forEach((tr,i)=>{
+    const p = a.pn[i];
+    tr.querySelector('[data-out=I]').textContent = p>0 ? fx(-Math.log2(p),2) : '∞';
+    tr.querySelector('[data-out=len]').textContent = a.C[i].length;
+  });
+}
+
+function renderTree(a){
+  const box = $('#tree');
+  if(a.errs){ box.innerHTML = '<p class="note" style="padding:16px">Fix the highlighted rows to draw the tree.</p>'; return; }
+  const root = {prefix:'', kids:{}, syms:[], depth:0};
+  a.C.forEach((c,i)=>{
+    let n = root;
+    for(const b of c){ if(!n.kids[b]) n.kids[b] = {prefix:n.prefix+b, kids:{}, syms:[], depth:n.depth+1}; n = n.kids[b]; }
+    n.syms.push(i);
+  });
+  let slot = 0; const nodes = [], edges = [];
+  (function lay(n){
+    const has = n.kids['0'] || n.kids['1'];
+    if(!has){ n.x = slot++; nodes.push(n); return; }
+    const xs = [];
+    for(const b of ['0','1']){
+      if(n.kids[b]){ lay(n.kids[b]); xs.push(n.kids[b].x); edges.push({from:n, to:n.kids[b], b}); }
+      else { const s = {prefix:n.prefix+b, stub:true, depth:n.depth+1, x:slot++, kids:{}, syms:[]}; nodes.push(s); xs.push(s.x); edges.push({from:n, to:s, b, stub:true}); }
+    }
+    n.x = (xs[0]+xs[xs.length-1])/2; nodes.push(n);
+  })(root);
+  const DX = 58, DY = 66, PAD = 34;
+  const W = Math.max(slot*DX + PAD*2 - DX, 240), Hh = a.maxL*DY + PAD*2 + 28;
+  const X = n => PAD + n.x*DX + (W - (PAD*2 + (slot-1)*DX))/2, Y = n => PAD + n.depth*DY;
+  let svg = `<svg width="${W}" height="${Hh}" viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Binary code tree">`;
+  for(const e of edges){
+    const x1=X(e.from), y1=Y(e.from), x2=X(e.to), y2=Y(e.to);
+    const col = e.stub ? 'var(--stub)' : (e.b==='0'?'var(--zero)':'var(--one)');
+    svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="2" ${e.stub?'stroke-dasharray="4 4"':''}/>`;
+    const mx = (x1+x2)/2 + (e.b==='0'?-9:9), my = (y1+y2)/2 - 2;
+    svg += `<text x="${mx}" y="${my}" text-anchor="middle" font-family="var(--mono)" font-size="13" font-weight="600" fill="${col}">${e.b}</text>`;
+  }
+  for(const n of nodes){
+    const x = X(n), y = Y(n);
+    if(n.stub){ svg += `<circle cx="${x}" cy="${y}" r="5" fill="var(--panel)" stroke="var(--stub)" stroke-width="2" stroke-dasharray="2 2"/>`; continue; }
+    if(n.syms.length){
+      const internal = n.kids['0'] || n.kids['1'];
+      const bad = internal || n.syms.length>1;
+      const col = bad ? 'var(--bad)' : 'var(--ink)';
+      svg += `<circle class="node" cx="${x}" cy="${y}" r="8" fill="${col}"/>`;
+      const label = n.syms.map(i=>esc(rows[i].sym)).join(', ');
+      if(internal) svg += `<text x="${x-14}" y="${y+5}" text-anchor="end" font-family="var(--sans)" font-size="15" font-weight="700" fill="${col}">${label}</text>`;
+      else svg += `<text x="${x}" y="${y+28}" text-anchor="middle" font-family="var(--sans)" font-size="15" font-weight="700" fill="${col}">${label}</text>`;
+    } else {
+      svg += `<circle class="node" cx="${x}" cy="${y}" r="4" fill="var(--muted)"/>`;
+      if(n===root) svg += `<text x="${x}" y="${y-12}" text-anchor="middle" font-family="var(--mono)" font-size="13" fill="var(--muted)">ε</text>`;
+    }
+  }
+  box.innerHTML = svg + '</svg>';
+}
+
+function renderSP(a){
+  if(a.errs){ $('#sp').innerHTML = ''; return; }
+  const sets = a.sp.steps.map(st=>{
+    const ks = [...st.set.keys()];
+    const shown = ks.length ? `{${ks.map(bitsHTML).join(', ')}}` : '∅';
+    const why = [...st.set.values()].map(v=>`<li>${v}</li>`).join('');
+    return `<div class="step${st.hit?' hit':''}${st.done?' done':''}"><div>S<sub>${st.i}</sub> = ${st.formula} = <span class="set">${shown}</span></div>${why?`<ul>${why}</ul>`:''}</div>`;
+  }).join('');
+  const dupNote = a.dups.length ? `<p class="note">The test runs on the set of distinct codewords; the duplicate codeword already makes the code not UD.</p>` : '';
+  $('#sp').innerHTML = sets + dupNote + `<p class="result ${a.ud?'yes':'no'}">${a.ud?'UD':'Not UD'}: ${a.udReason}</p>`;
+}
+
+function renderDecode(a){
+  const out = $('#decode');
+  const bits = $('#bits').value.replace(/\s+/g,'');
+  $('#bits').classList.toggle('invalid', /[^01]/.test(bits));
+  if(a.errs){ out.innerHTML = ''; return; }
+  if(/[^01]/.test(bits)){ out.innerHTML = '<p class="errors">The bit string can only contain 0 and 1.</p>'; return; }
+  if(!bits){ out.innerHTML = '<p class="note">Type bits, or encode a message above, to see how a decoder splits them.</p>'; return; }
+  if(bits.length > 400){ out.innerHTML = '<p class="errors">Keep the bit string to 400 bits or fewer.</p>'; return; }
+  const n = bits.length;
+  const ways = new Array(n+1).fill(0); ways[n] = 1;
+  for(let p=n-1;p>=0;p--) for(const r of rows) if(bits.startsWith(r.code,p)) ways[p] += ways[p+r.code.length];
+  const LIMIT = 8, res = [];
+  (function dfs(p, path){
+    if(res.length>=LIMIT) return;
+    if(p===n){ res.push(path.slice()); return; }
+    for(const r of rows) if(ways[p+r.code.length] > 0 && bits.startsWith(r.code,p)){ path.push(r); dfs(p+r.code.length,path); path.pop(); if(res.length>=LIMIT) return; }
+  })(0, []);
+  const chip = r => `<span class="chip"><b>${esc(r.sym)}</b><code>${bitsHTML(r.code)}</code></span>`;
+  if(ways[0]===0){
+    // longest prefix that splits into codewords
+    const reach = new Array(n+1).fill(false); reach[0] = true; const from = new Array(n+1).fill(null); let far = 0;
+    for(let p=0;p<n;p++) if(reach[p]) for(const r of rows) if(bits.startsWith(r.code,p) && !reach[p+r.code.length]){ reach[p+r.code.length]=true; from[p+r.code.length]=r; far=Math.max(far,p+r.code.length); }
+    const path = []; for(let p=far; p>0; p-=from[p].code.length) path.unshift(from[p]);
+    out.innerHTML = `<p class="errors">No way to split the whole string into codewords.</p><div class="parse">${path.map(chip).join('')}<span class="chip rest"><b>?</b><code>${bitsHTML(bits.slice(far))}</code></span></div><p class="note">Decodable up to bit ${far} of ${n}.</p>`;
+    return;
+  }
+  const count = ways[0];
+  const head = count===1 ? '<p><strong>Exactly one decoding.</strong></p>'
+    : `<p class="errors"><strong>${count > 1e15 ? 'Astronomically many' : count.toLocaleString()} different decodings</strong>, so this string is ambiguous${res.length<count?` (first ${res.length} shown)`:''}.</p>`;
+  let extra = '';
+  if(count===1 && !a.prefixFree) extra = '<p class="note">Unique, but the decoder couldn\'t commit to the first symbol until it had read far enough ahead: the code is not instantaneous.</p>';
+  else if(count===1) extra = '<p class="note">Prefix-free, so each symbol was known as soon as its last bit arrived.</p>';
+  out.innerHTML = head + res.map(p=>`<div class="parse">${p.map(chip).join('')}</div>`).join('') + extra;
+}
+
+function encodeMsg(){
+  const msg = $('#msg').value;
+  const map = new Map(rows.map(r=>[r.sym, r.code]));
+  const allSingle = rows.every(r=>[...r.sym].length===1);
+  const toks = allSingle ? [...msg.replace(/\s+/g,'')] : msg.trim().split(/\s+/).filter(Boolean);
+  const bad = toks.find(t=>!map.has(t));
+  if(bad!==undefined){ $('#decode').innerHTML = `<p class="errors">"${esc(bad)}" isn't one of the symbols in the table.${allSingle?'':' Separate multi-letter symbols with spaces.'}</p>`; return false; }
+  $('#bits').value = toks.map(t=>map.get(t)).join('');
+  return true;
+}
+
+let last;
+function update(){
+  last = analyze();
+  $('#rows').querySelectorAll('tr').forEach((tr,i)=>{
+    const r = rows[i]; const [s,p,c] = tr.querySelectorAll('input');
+    c.classList.toggle('invalid', !/^[01]{1,30}$/.test(r.code));
+    p.classList.toggle('invalid', !(parseP(r.p) >= 0));
+    s.classList.toggle('invalid', !r.sym);
+    if(last.errs){ tr.querySelector('[data-out=I]').textContent=''; tr.querySelector('[data-out=len]').textContent=''; }
+  });
+  renderMetrics(last); renderTree(last); renderSP(last); renderDecode(last);
+}
+
+function loadPreset(i){
+  const pr = PRESETS[i];
+  rows = pr.rows.map(([sym,p,code])=>({sym,p,code}));
+  renderTable();
+  $('#msg').value = pr.msg || '';
+  if(pr.bits) $('#bits').value = pr.bits; else { last = analyze(); if(!last.errs) encodeMsg(); }
+  update();
+}
+
+$('#preset').innerHTML = PRESETS.map((p,i)=>`<option value="${i}">${esc(p.label)}</option>`).join('');
+$('#preset').addEventListener('change', e => loadPreset(+e.target.value));
+$('#encodeBtn').addEventListener('click', () => { if(!last.errs && encodeMsg()) renderDecode(last); });
+$('#msg').addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); $('#encodeBtn').click(); } });
+$('#bits').addEventListener('input', () => renderDecode(last));
+loadPreset(2);
+})();
+</script>
+</body>
+</html>
